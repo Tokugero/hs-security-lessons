@@ -1,0 +1,7 @@
+---
+- hosts: linux
+  vars:
+    k8s_version: "1.29"
+  tasks:
+    - name: setup k8s dependencies
+      include_tasks: establish-cluster.yml
