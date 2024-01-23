@@ -1,2 +1,10 @@
-$ANSIBLE_VAULT;1.2;AES256;credentials
-...
+# This should be done with `ansible-vault create --vault-id credentials@prompt ansible/group_vars/all/vault.yml` and will generate a hashed file
+---
+credentials:
+  linux:
+    user: notroot
+    password: notrootpassword
+    root_password: rootpassword
+  windows:
+    user: Administrator
+    password: rootpassword
