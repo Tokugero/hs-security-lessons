@@ -1,0 +1,20 @@
+linux:
+  vars:
+    ansible_user: "{{ credentials.linux.user | d('notroot') }}"
+    ansible_password: "{{ credentials.linux.password | d('') }}"
+    ansible_become: yes
+    ansible_become_method: su
+    ansible_become_user: root
+    ansible_become_pass: "{{ credentials.linux.root_password | d('') }}"
+  hosts:
+    controller-001:
+      ansible_host: 192.168.20.178
+    node-linux-001:
+      ansible_host: 192.168.20.176
+windows:
+  vars:
+    ansible_user: "{{ credentials.windows.user | d('Administrator') }}"
+    ansible_password: "{{ credentials.windows.password | d('') }}"
+  hosts:
+    node-windows-001:
+      ansible_host: 192.168.20.175

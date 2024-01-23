@@ -1,0 +1,45 @@
+- name: Update apt
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install packages
+  apt:
+    pkg:
+      - ca-certificates
+      - curl
+      - gnupg
+      - python3-pip
+      - python3-requests
+
+- name: Add keyring directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+
+- name: Add apt_key
+  block:
+    - name: Docker Repo
+      get_url: 
+        url: https://download.docker.com/linux/debian/gpg
+        dest: /etc/apt/keyrings/docker.asc
+
+    - name: Add repository
+      apt_repository:
+        filename: docker.list
+        repo: deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable
+        state: present
+
+- name: Update apt
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install packages
+  apt:
+    pkg:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin

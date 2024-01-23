@@ -1,0 +1,5 @@
+---
+- hosts: linux
+  tasks:
+    - name: Configure base hosts
+      include_tasks: host-configure.yml
