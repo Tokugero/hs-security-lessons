@@ -1,0 +1,45 @@
+#############################################
+# Setup with shared services - these are services that are resources shared by users, not necessarily part of the core infrastructure
+#############################################
+
+- name: Deploy namespace
+  kubernetes.core.k8s:
+    state: present
+    name: shared-services
+    api_version: v1
+    kind: Namespace
+
+- name: Deploy influxDB pods
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', 'deployments/influxdb-deployment.yml') | from_yaml }}"
+
+- name: Deploy influxDB service
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', 'deployments/influxdb-service.yml') | from_yaml }}"
+
+#- name: Deploy kubeshark
+#  kubernetes.core.k8s:
+#    state: present
+#    src: deployments/kubeshark.yml
+#
+#- name: Deploy kubevirt
+#  kubernetes.core.k8s:
+#    state: present
+#    src: deployments/kubevirt.yml
+
+- name: Deploy grafana pods
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', 'deployments/grafana-deployment.yml') | from_yaml }}"
+
+- name: Deploy grafana service
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', 'deployments/grafana-service.yml') | from_yaml }}"
+
+#- name: Deploy grafana templates
+#  kubernetes.core.k8s:
+#    state: present
+#    src: grafana-dashboards.yml

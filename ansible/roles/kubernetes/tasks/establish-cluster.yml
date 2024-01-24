@@ -23,6 +23,7 @@
       - kubelet={{ k8s_version }}.1-1.1
       - kubeadm={{ k8s_version }}.1-1.1
       - kubectl={{ k8s_version }}.1-1.1
+      - python3-kubernetes
     state: present
 
 - name: Hold kubelet
@@ -111,6 +112,39 @@
       retries: 10
       delay: 10
 
+- name: Deploy metallb
+  when: inventory_hostname in groups["controllers"]
+  block:
+  - name: Deploy metallb with defaults
+    shell: kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.13.12/config/manifests/metallb-native.yaml
+
+  - name: Metallb namespace
+    kubernetes.core.k8s:
+      api_version: v1
+      kind: Namespace
+      state: present
+      name: metallb-system
+
+  - name: Configure metallb pool
+    kubernetes.core.k8s:
+      state: present
+      template: metallb-config.yml.j2
+
+- name: Deploy kubevirt
+  when: inventory_hostname in groups["controllers"]
+  block:
+    - name: Install kubevirt
+      shell: |
+        kubectl apply -f https://github.com/kubevirt/kubevirt/releases/download/{{ lookup('ansible.builtin.url', 'https://storage.googleapis.com/kubevirt-prow/release/kubevirt/kubevirt/stable.txt') }}/kubevirt-operator.yaml
+        kubectl apply -f https://github.com/kubevirt/kubevirt/releases/download/{{ lookup('ansible.builtin.url', 'https://storage.googleapis.com/kubevirt-prow/release/kubevirt/kubevirt/stable.txt') }}/kubevirt-cr.yaml
+
+    - name: Wait for kubevirt to complete
+      shell: kubectl -n kubevirt wait kv kubevirt --for condition=Available
+      register: kubevirt_ready
+      until: kubevirt_ready.stdout == "kubevirt.kubevirt.io/kubevirt condition met"
+      retries: 10
+      delay: 20
+      
 #############################################
 # Pass around credentials for access to cluster
 #############################################
