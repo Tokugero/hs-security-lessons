@@ -1,7 +1,10 @@
 ---
 - hosts: linux
+  environment:
+    PATH: "{{ ansible_env.PATH }}:/usr/sbin"
   vars:
-    k8s_version: "1.29"
+    k8s_version: "1.29" # Latest version of k8s at the time of writing
+    k8s_cidr: "10.244.0.0/16" # This is the default CIDR for flannel
   tasks:
     - name: setup k8s dependencies
       include_tasks: establish-cluster.yml

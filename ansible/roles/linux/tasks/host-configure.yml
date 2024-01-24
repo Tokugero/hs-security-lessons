@@ -45,3 +45,15 @@
       - containerd.io
       - docker-buildx-plugin
       - docker-compose-plugin
+
+- name: Configure containerd
+  shell: |
+    mkdir -p /etc/containerd
+    containerd config default | tee /etc/containerd/config.toml
+    sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config.toml
+    
+- name: Enable containerd
+  systemd:
+    name: containerd
+    enabled: yes
+    state: restarted
