@@ -144,7 +144,20 @@
       until: kubevirt_ready.stdout == "kubevirt.kubevirt.io/kubevirt condition met"
       retries: 10
       delay: 20
-      
+
+    - name: Patch to use nested virtualization
+      kubernetes.core.k8s:
+        state: patched
+        kind: KubeVirt
+        name: kubevirt
+        namespace: kubevirt
+        api_version: kubevirt.io/v1
+        definition:
+          spec:
+            configuration:
+              developerConfiguration:
+                useEmulation: true
+
 #############################################
 # Pass around credentials for access to cluster
 #############################################
