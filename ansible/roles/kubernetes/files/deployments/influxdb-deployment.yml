@@ -18,5 +18,20 @@ spec:
       containers:
       - name: influxdb
         image: influxdb:2.7.5
+        env:
+        - name: DOCKER_INFLUXDB_INIT_MODE
+          value: "setup"
+        - name: DOCKER_INFLUXDB_INIT_USERNAME
+          value: "admin"
+        - name: DOCKER_INFLUXDB_INIT_BUCKET
+          value: "lessons"
+        - name: DOCKER_INFLUXDB_INIT_PASSWORD
+          value: "adminadmin"
+        - name: DOCKER_INFLUXDB_INIT_ORG
+          value: "lessons"
+        - name: DOCKER_INFLUXDB_INIT_RETENTION
+          value: "1w"
+        - name: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN
+          value: "adminadmin"
         ports:
         - containerPort: 8086

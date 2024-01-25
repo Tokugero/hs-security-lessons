@@ -19,6 +19,16 @@
     state: present
     definition: "{{ lookup('file', 'deployments/influxdb-service.yml') | from_yaml }}"
 
+- name: Deploy registry pods
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', 'deployments/registry-deployment.yml') | from_yaml }}"
+
+- name: Deploy registry service
+  kubernetes.core.k8s:
+    state: present
+    template: registry-service.yml.j2
+
 #- name: Deploy kubeshark
 #  kubernetes.core.k8s:
 #    state: present

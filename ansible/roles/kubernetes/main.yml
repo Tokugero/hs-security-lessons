@@ -6,6 +6,7 @@
     k8s_version: "1.29" # Latest version of k8s at the time of writing
     k8s_cidr: "10.244.0.0/16" # This is the default CIDR for flannel
     metallb_range: "192.168.20.25-192.168.20.50"
+    registry_ip: "192.168.20.30"
   tasks:
     - name: Setup k8s dependencies
       include_tasks: tasks/establish-cluster.yml
