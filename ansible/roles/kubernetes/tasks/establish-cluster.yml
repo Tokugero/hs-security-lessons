@@ -52,6 +52,34 @@
     backrefs: yes
     state: present
 
+- name: Update config.toml to allow for insecure local registry
+  lineinfile:
+    dest: /etc/containerd/config.toml
+    regexp: 'config_path = ""'
+    line: '      config_path = "/etc/containerd/certs.d"'
+
+- name: Add host for future cluster insecure local registry
+  block:
+    - name: Clean directory for certs
+      file:
+        path: "/etc/containerd/certs.d/{{ registry_ip }}"
+        state: absent
+        
+    - name: Create directory for certs
+      file:
+        path: "/etc/containerd/certs.d/{{ registry_ip }}"
+        state: directory
+
+    - name: Add host to insecure registry
+      template:
+        src: insecure-registry.toml.j2
+        dest: "/etc/containerd/certs.d/{{ registry_ip }}/hosts.toml"
+
+    - name: Restart containerd
+      service:
+        name: containerd
+        state: restarted
+
 #############################################
 # Setup with kubeadm
 #############################################
