@@ -1,0 +1,59 @@
+- name: Update apt
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: install telegraf
+  shell: |
+    curl -s https://repos.influxdata.com/influxdata-archive.key > influxdata-archive.key
+    echo '943666881a1b8d9b849b74caebf02d3465d6beb716510d86a39f6c8e8dac7515 influxdata-archive.key' | sha256sum -c && cat influxdata-archive.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/influxdata-archive.gpg > /dev/null
+    echo 'deb [signed-by=/etc/apt/trusted.gpg.d/influxdata-archive.gpg] https://repos.influxdata.com/debian stable main' | sudo tee /etc/apt/sources.list.d/influxdata.list
+
+- name: Update apt
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install packages
+  apt:
+    pkg:
+      - telegraf
+    state: present
+
+- name: create telegraf config directory
+  file:
+    path: /etc/telegraf/telegraf.conf.d
+    state: directory
+
+- name: copy base telegraf output plugin
+  copy:
+    src: templates/telegraf.output.conf
+    dest: /etc/telegraf/telegraf.conf.d/telegraf.output.conf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: enable and start telegraf
+  systemd:
+    name: telegraf
+    enabled: yes
+    state: restarted
+
+- name: create resolved directory
+  file:
+    path: /etc/systemd/resolved.conf.d
+    state: directory
+
+- name: Add cluster DNS configuration
+  copy:
+    src: templates/dns_servers.conf
+    dest: /etc/systemd/resolved.conf.d/dns_servers.conf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: restart resolved
+  systemd:
+    name: systemd-resolved
+    enabled: yes
+    state: restarted

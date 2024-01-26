@@ -1,0 +1,45 @@
+- name: install cloud-init
+  apt:
+    pkg:
+      - cloud-init
+    state: present
+
+- name: copy cloud.cfg
+  copy:
+    src: templates/cloud-init.conf
+    dest: /etc/cloud/cloud.cfg
+    owner: root
+    group: root
+    mode: 0644
+
+- name: run cloud init local
+  shell: cloud-init init --local
+  register: cloudinitoutput
+
+- name: show init output
+  debug:
+    msg: "{{ cloudinitoutput.stdout_lines }}"
+
+- name: clean up cloud-init
+  file:
+    path: /var/lib/cloud
+    state: absent
+
+- name: clear interfaces
+  file:
+    path: /etc/network/interfaces.d/50-cloud-init.cfg
+    state: absent
+
+- name: update interfaces script
+  copy:
+    src: templates/interfaces
+    dest: /etc/network/interfaces
+    owner: root
+    group: root
+    mode: 0644
+
+- name: shutdown vm
+  shell: shutdown -h now
+  async: 0
+  poll: 0
+  ignore_unreachable: true

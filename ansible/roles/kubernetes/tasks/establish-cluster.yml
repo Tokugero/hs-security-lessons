@@ -161,10 +161,13 @@
 - name: Deploy kubevirt
   when: inventory_hostname in groups["controllers"]
   block:
-    - name: Install kubevirt
+    - name: Install kubevirt # https://github.com/kubevirt/containerized-data-importer/blob/main/README.md TODO: Break this into composable parts
       shell: |
         kubectl apply -f https://github.com/kubevirt/kubevirt/releases/download/{{ lookup('ansible.builtin.url', 'https://storage.googleapis.com/kubevirt-prow/release/kubevirt/kubevirt/stable.txt') }}/kubevirt-operator.yaml
         kubectl apply -f https://github.com/kubevirt/kubevirt/releases/download/{{ lookup('ansible.builtin.url', 'https://storage.googleapis.com/kubevirt-prow/release/kubevirt/kubevirt/stable.txt') }}/kubevirt-cr.yaml
+        export VERSION=$(curl -s https://api.github.com/repos/kubevirt/containerized-data-importer/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+        kubectl apply -f https://github.com/kubevirt/containerized-data-importer/releases/download/$VERSION/cdi-operator.yaml
+        kubectl apply -f https://github.com/kubevirt/containerized-data-importer/releases/download/$VERSION/cdi-cr.yaml
 
     - name: Wait for kubevirt to complete
       shell: kubectl -n kubevirt wait kv kubevirt --for condition=Available
@@ -172,6 +175,13 @@
       until: kubevirt_ready.stdout == "kubevirt.kubevirt.io/kubevirt condition met"
       retries: 10
       delay: 20
+    
+    - name: Create namespace for kubevirt images
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        state: present
+        name: kubevirt-images
 
     - name: Patch to use nested virtualization
       kubernetes.core.k8s:
@@ -185,6 +195,15 @@
             configuration:
               developerConfiguration:
                 useEmulation: true
+          
+# TODO: Customize this for the final cluster storage solution
+- name: Create storage provisioners
+  when: inventory_hostname in groups["controllers"]
+  block:
+  - name: Install storage drivers
+    shell: |
+      kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.26/deploy/local-path-storage.yaml
+      kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
 
 #############################################
 # Pass around credentials for access to cluster

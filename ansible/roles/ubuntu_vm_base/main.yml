@@ -1,0 +1,7 @@
+---
+- hosts: basevm_linux
+  tasks:
+    - name: Install base for system
+      include_tasks: tasks/install-base.yml
+    - name: Sysprep
+      include_tasks: tasks/sysprep.yml
