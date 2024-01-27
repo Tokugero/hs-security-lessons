@@ -1,3 +1,8 @@
+- name: clean cloud-init.log
+  file:
+    path: /var/log/cloud-init.log
+    state: absent
+
 - name: install cloud-init
   apt:
     pkg:
@@ -39,7 +44,5 @@
     mode: 0644
 
 - name: shutdown vm
-  shell: shutdown -h now
-  async: 0
-  poll: 0
-  ignore_unreachable: true
+  debug: 
+    msg: "Manually shut down the VM now to ensure HD is merged."

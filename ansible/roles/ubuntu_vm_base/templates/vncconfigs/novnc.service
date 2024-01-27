@@ -1,0 +1,13 @@
+[Unit]
+Description=novnc service
+After=syslog.target network.target
+
+[Service]
+Type=simple
+
+# Clean any existing files in /tmp/.X11-unix environment
+ExecStart=/usr/bin/websockify --web=/usr/share/novnc/ 8080 localhost:5900
+ExecStop=/bin/kill "$MAINPID"
+
+[Install]
+WantedBy=multi-user.target

@@ -17,18 +17,20 @@
 - name: Install packages
   apt:
     pkg:
+      - libsecret-tools
+      - novnc
       - telegraf
     state: present
 
 - name: create telegraf config directory
   file:
-    path: /etc/telegraf/telegraf.conf.d
+    path: /etc/telegraf/telegraf.d
     state: directory
 
 - name: copy base telegraf output plugin
   copy:
     src: templates/telegraf.output.conf
-    dest: /etc/telegraf/telegraf.conf.d/telegraf.output.conf
+    dest: /etc/telegraf/telegraf.d/telegraf.output.conf
     owner: root
     group: root
     mode: 0644
@@ -57,3 +59,63 @@
     name: systemd-resolved
     enabled: yes
     state: restarted
+
+- name: Ensure automatic login is set
+  copy:
+    src: templates/gdm.custom.conf
+    dest: /etc/gdm3/custom.conf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Copy xstartup
+  copy:
+    src: templates/vncconfigs/xstartup
+    dest: /home/ubuntu/.vnc/xstartup
+    owner: ubuntu
+    group: ubuntu
+    mode: a+x
+
+- name: Enable and start vncserver
+  become: true
+  become_user: ubuntu
+  systemd:
+    name: gnome-remote-desktop
+    enabled: yes
+    state: restarted
+    scope: user
+
+- name: Enable vnc shenanigans
+  become: true
+  become_user: ubuntu
+  shell: |
+    grdctl vnc enable
+    gsettings set org.gnome.desktop.screensaver lock-enabled false
+    gsettings set org.gnome.desktop.session idle-delay 0
+
+- name: Set vnc password
+  copy:
+    src: templates/vncconfigs/remotedesktop.credentials
+    dest: /home/ubuntu/.local/share/keyrings/login.keyring # This stores the unlocked variant so we don't have to change passwords every login
+    owner: ubuntu
+    group: ubuntu
+    mode: 0600
+
+- name: Create novnc service
+  copy:
+    src: templates/vncconfigs/novnc.service
+    dest: /etc/systemd/system/novnc.service
+    owner: root
+    group: root
+    mode: 0644
+
+- name: enable novnc
+  systemd:
+    name: novnc
+    enabled: yes
+    state: restarted
+
+- name: Turn swap off
+  shell: |
+    swapoff -a
+    sed -i '/ swap / s/^/#/' /etc/fstab
