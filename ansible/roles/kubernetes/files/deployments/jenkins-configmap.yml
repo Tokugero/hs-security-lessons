@@ -1,0 +1,10 @@
+apiVersion: v1
+data:
+  daemon.json: |
+    {
+      "insecure-registries" : ["registry.shared-services"]
+    }
+kind: ConfigMap
+metadata:
+  name: jenkins-configmap
+  namespace: shared-services

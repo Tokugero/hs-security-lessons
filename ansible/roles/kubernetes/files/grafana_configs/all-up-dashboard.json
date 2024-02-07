@@ -148,17 +148,39 @@
               },
               {
                 "color": "red",
-                "value": 80
+                "value": 0
               }
             ]
           },
           "unitScale": true
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Points"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-RdYlGr"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 24,
         "x": 0,
         "y": 9
       },
@@ -218,12 +240,13 @@
     "list": [
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": ["All"],
           "value": ["$__all"]
         },
         "datasource": {
-          "type": "influxdb"
+          "type": "influxdb",
+          "uid": "d079af9c-1a1b-434e-bc37-657440198ac2"
         },
         "definition": "import \"influxdata/influxdb/v1\"\r\nv1.tagValues(\r\n    bucket: v.bucket,\r\n    tag: \"lesson\",\r\n    predicate: (r) => true,\r\n    start: -1d\r\n)",
         "hide": 1,
@@ -241,12 +264,13 @@
       },
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": ["All"],
           "value": ["$__all"]
         },
         "datasource": {
-          "type": "influxdb"
+          "type": "influxdb",
+          "uid": "d079af9c-1a1b-434e-bc37-657440198ac2"
         },
         "definition": "import \"influxdata/influxdb/v1\"\r\nv1.tagValues(\r\n    bucket: v.bucket,\r\n    tag: \"student\",\r\n    predicate: (r) => true,\r\n    start: -1d\r\n)",
         "hide": 1,
@@ -271,6 +295,7 @@
   "timepicker": {},
   "timezone": "",
   "title": "lesson scores",
-  "version": 6,
+  "uid": "a289327f-1ef0-4ebc-b1e2-9c2cd7b172e6",
+  "version": 2,
   "weekStart": ""
 }

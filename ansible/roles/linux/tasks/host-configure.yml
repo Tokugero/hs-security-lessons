@@ -1,3 +1,8 @@
+- name: Set hostname
+  hostname:
+    name: "{{ inventory_hostname }}"
+    use: debian
+
 - name: Update apt
   apt:
     update_cache: yes
@@ -11,6 +16,8 @@
       - curl
       - gnupg
       - gpg
+      - nfs-common
+      - open-iscsi
       - python3-pip
       - python3-requests
 
@@ -22,14 +29,14 @@
 - name: Add apt_key
   block:
     - name: Docker Repo
-      get_url: 
-        url: https://download.docker.com/linux/debian/gpg
+      get_url:
+        url: "https://download.docker.com/linux/{{ ansible_distribution_file_variety | lower }}/gpg"
         dest: /etc/apt/keyrings/docker.asc
 
     - name: Add repository
       apt_repository:
         filename: docker.list
-        repo: deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable
+        repo: "deb [arch={{ arch }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/{{ ansible_distribution_file_variety | lower }} {{ ansible_distribution_release }} stable"
         state: present
 
 - name: Update apt
@@ -51,9 +58,26 @@
     mkdir -p /etc/containerd
     containerd config default | tee /etc/containerd/config.toml
     sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config.toml
-    
+
+- name: Customize Pi containerd
+  when: node_label == "pi"
+  lineinfile:
+    path: /etc/containerd/config.toml
+    line: 'root = "/mnt/usbstorage/containerd"'
+    regexp: 'root = "/var/lib/containerd"'
+
 - name: Enable containerd
   systemd:
     name: containerd
     enabled: yes
     state: restarted
+
+- name: Enable iscsid
+  systemd:
+    name: iscsid
+    enabled: yes
+    state: restarted
+
+- name: Restart host
+  ignore_unreachable: true
+  reboot:

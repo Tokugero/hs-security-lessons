@@ -1,22 +1,39 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: grafana
   namespace: shared-services
-  labels:
-    app: grafana
 spec:
-  replicas: 1
   selector:
     matchLabels:
-      app: grafana
+      app: grafana 
+  serviceName: "grafana"
+  replicas: 1
   template:
     metadata:
       labels:
         app: grafana
     spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      terminationGracePeriodSeconds: 10
       containers:
       - name: grafana
-        image: grafana/grafana-oss
+        image: grafana/grafana-oss:10.3.1
         ports:
         - containerPort: 3000
+          name: web
+        volumeMounts:
+        - name: config
+          mountPath: /var/lib/grafana
+  volumeClaimTemplates:
+  - metadata:
+      name: config
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: mayastor-3-rv
+      resources:
+        requests:
+          storage: 10Gi

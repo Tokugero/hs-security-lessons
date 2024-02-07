@@ -49,6 +49,30 @@
     state: present
     definition: "{{ lookup('file', 'deployments/grafana-service.yml') | from_yaml }}"
 
+- name: Deploy jenkins pods
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', 'deployments/jenkins-deployment.yml') | from_yaml }}"
+
+- name: Deploy jenkins service
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', 'deployments/jenkins-service.yml') | from_yaml }}"
+
+- name: Deploy jenkins configmap
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', 'deployments/jenkins-configmap.yml') | from_yaml }}"
+
+- name: Deploy gitea pods
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', 'deployments/gitea-deployment.yml') | from_yaml }}"
+
+- name: Deploy gitea service
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', 'deployments/gitea-service.yml') | from_yaml }}"
 #- name: Deploy grafana templates
 #  kubernetes.core.k8s:
 #    state: present

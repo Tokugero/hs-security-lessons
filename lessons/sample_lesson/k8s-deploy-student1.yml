@@ -44,8 +44,6 @@ kind: Service
 metadata:
   name: philip-almueti
   namespace: philip-almueti
-  annotations:
-    metallb.universe.tf/loadBalancerIPs: 192.168.20.27
 spec:
   ports:
   - name: rdp

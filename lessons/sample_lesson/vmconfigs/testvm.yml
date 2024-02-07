@@ -2,18 +2,16 @@ apiVersion: kubevirt.io/v1alpha3
 kind: VirtualMachine
 metadata:
   labels:
-    kubevirt.io/vm: ubuntu-test
-  name: ubuntu-test
+    kubevirt.io/vm: ubuntu-test-1
+  name: ubuntu-test-1
   namespace: default
 spec:
   runStrategy: "RerunOnFailure"
   template:
     metadata:
       labels:
-        kubevirt.io/vm: ubuntu-test
+        kubevirt.io/vm: ubuntu-test-1
     spec:
-      nodeSelector: 
-        kubernetes.io/hostname: node-linux-001
       domain:
         devices:
           disks:
@@ -30,14 +28,14 @@ spec:
         machine:
           type: q35
         cpu:
-          cores: 4
+          cores: 1
         resources:
           requests:
-            memory: 8Gi
+            memory: 2Gi
       terminationGracePeriodSeconds: 0
       volumes:
       - dataVolume:
-          name: ubuntu-test
+          name: ubuntu-test-1
         name: datavolumedisk1
       - name: cloudinit
         cloudInitConfigDrive:
@@ -47,10 +45,10 @@ spec:
             echo "This is from cloud-init"
   dataVolumeTemplates:
   - metadata:
-      name: ubuntu-test
+      name: ubuntu-test-1
     spec:
       pvc:
-        storageClassName: local-path
+        storageClassName: var-local-path
         accessModes:
         - ReadWriteOnce
         resources:
@@ -64,7 +62,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ubuntu-test
+  name: ubuntu-test-1
   namespace: default 
 spec:
   ports:
@@ -72,7 +70,7 @@ spec:
     name: ssh
     protocol: TCP
     targetPort: 22
-  - port: 8080
+  - port: 80
     name: websockify
     protocol: TCP
     targetPort: 8080
@@ -85,5 +83,5 @@ spec:
     protocol: TCP
     targetPort: 5900
   selector:
-    kubevirt.io/vm: ubuntu-test
+    kubevirt.io/vm: ubuntu-test-1
   type: LoadBalancer

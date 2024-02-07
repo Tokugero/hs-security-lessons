@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: jenkins
+  namespace: shared-services
+spec:
+  selector:
+    matchLabels:
+      app: jenkins
+  serviceName: "jenkins"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: jenkins
+    spec:
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: jenkins
+          image: jenkins/jenkins:2.444
+          ports:
+            - containerPort: 8080
+              name: web
+          env:
+            - name: DOCKER_HOST
+              value: tcp://127.0.0.1:2375
+          volumeMounts:
+            - name: config
+              mountPath: /var/jenkins_home
+            - name: dockerbin
+              mountPath: /usr/bin/docker
+        - name: dind
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          image: docker:25.0.2-dind-rootless
+          command: ["dockerd", "-H", "tcp://0.0.0.0:2375", "--tls=false"]
+          volumeMounts:
+            - name: daemonjson
+              mountPath: /etc/docker
+      volumes:
+        - name: dockerbin
+          hostPath:
+            path: /usr/bin/docker
+            type: File
+        - name: daemonjson
+          configMap:
+            name: jenkins-configmap
+  volumeClaimTemplates:
+    - metadata:
+        name: config
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: mayastor-3-rv
+        resources:
+          requests:
+            storage: 10Gi

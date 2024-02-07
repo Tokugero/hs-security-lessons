@@ -3,7 +3,7 @@
 - name: Add apt_key
   block:
     - name: K8S Repo
-      get_url: 
+      get_url:
         url: https://pkgs.k8s.io/core:/stable:/v{{ k8s_version }}/deb/Release.key
         dest: /etc/apt/keyrings/kubernetes-apt-keyring.asc
 
@@ -47,7 +47,7 @@
 - name: Update fstab
   lineinfile:
     dest: /etc/fstab
-    regexp: '^(UUID=.*swap.*)'
+    regexp: "^(UUID=.*swap.*)"
     line: '# \1'
     backrefs: yes
     state: present
@@ -64,7 +64,7 @@
       file:
         path: "/etc/containerd/certs.d/{{ registry_ip }}"
         state: absent
-        
+
     - name: Create directory for certs
       file:
         path: "/etc/containerd/certs.d/{{ registry_ip }}"
@@ -74,6 +74,21 @@
       template:
         src: insecure-registry.toml.j2
         dest: "/etc/containerd/certs.d/{{ registry_ip }}/hosts.toml"
+
+    - name: Clean directory for certs
+      file:
+        path: "/etc/containerd/certs.d/registry.shared-services"
+        state: absent
+
+    - name: Create directory for certs
+      file:
+        path: "/etc/containerd/certs.d/registry.shared-services"
+        state: directory
+
+    - name: Add host to insecure registry
+      template:
+        src: insecure-registry.toml.j2
+        dest: "/etc/containerd/certs.d/registry.shared-services/hosts.toml"
 
     - name: Restart containerd
       service:
@@ -96,6 +111,18 @@
       shell: kubeadm init --pod-network-cidr={{ k8s_cidr }}
       when: kubeadmn_init.stat.exists == false
 
+    - name: Create remote config path
+      file:
+        path: /root/.kube
+        state: directory
+
+    - name: Copy kubeconfig to remote for future scripts
+      copy:
+        src: /etc/kubernetes/admin.conf
+        remote_src: true
+        dest: /root/.kube/config
+        mode: "0600"
+
     - name: Generate token just in case we need it for the next task
       shell: kubeadm token create --print-join-command
       register: kubeadm_token_create
@@ -104,7 +131,7 @@
   when: inventory_hostname in groups["workers"]
   block:
     - name: Check if cluster is established
-      stat: 
+      stat:
         path: /etc/kubernetes/kubelet.conf
       register: kubeadm_join
 
@@ -122,6 +149,66 @@
 
     - name: Delete token
       shell: kubeadm token delete {{ kubeadm_token_list.stdout_lines[1].split()[0] }}
+
+#############################################
+# Pass around credentials for access to cluster
+#############################################
+
+- name: Steal admin config from controller for a bit
+  when: inventory_hostname in groups["controllers"]
+  block:
+    - name: Get config from controller
+      slurp:
+        src: /etc/kubernetes/admin.conf
+      register: kubeconfig
+
+    - name: Create .kube if not exists
+      become: false
+      delegate_to: localhost
+      file:
+        path: ~/.kube
+        state: directory
+
+    - name: Clean kubeconfig
+      become: false
+      delegate_to: localhost
+      file:
+        path: ~/.kube/config.hscluster
+        state: absent
+
+    - name: Copy kubeconfig to local
+      become: false
+      delegate_to: localhost
+      copy:
+        content: "{{ kubeconfig.content | b64decode | string }}"
+        dest: ~/.kube/config.hscluster
+
+    - name: Create remote config path
+      file:
+        path: /root/.kube
+        state: directory
+
+    - name: Copy kubeconfig to remote for future scripts
+      copy:
+        content: "{{ kubeconfig.content | b64decode | string }}"
+        dest: /root/.kube/config
+        mode: "0600"
+
+    - name: Replace IP
+      become: false
+      delegate_to: localhost
+      replace:
+        path: ~/.kube/config.hscluster
+        regexp: "0.0.0.0"
+        replace: "{{ ansible_default_ipv4.address }}"
+
+    - name: Replace CA
+      become: false
+      delegate_to: localhost
+      replace:
+        path: ~/.kube/config.hscluster
+        regexp: "certificate-authority-data.*"
+        replace: "insecure-skip-tls-verify: true"
 
 #############################################
 # Setup with core infrastructure
@@ -143,20 +230,25 @@
 - name: Deploy metallb
   when: inventory_hostname in groups["controllers"]
   block:
-  - name: Deploy metallb with defaults
-    shell: kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.13.12/config/manifests/metallb-native.yaml
+    - name: Deploy metallb with defaults
+      shell: kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.13.12/config/manifests/metallb-native.yaml
 
-  - name: Metallb namespace
-    kubernetes.core.k8s:
-      api_version: v1
-      kind: Namespace
-      state: present
-      name: metallb-system
+    - name: Metallb namespace
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        state: present
+        name: metallb-system
 
-  - name: Configure metallb pool
-    kubernetes.core.k8s:
-      state: present
-      template: metallb-config.yml.j2
+    - name: Configure metallb pool
+      ignore_errors: true
+      retries: 10
+      delay: 20
+      register: ippool
+      until: ippool.failed == false
+      kubernetes.core.k8s:
+        state: present
+        template: metallb-config.yml.j2
 
 - name: Deploy kubevirt
   when: inventory_hostname in groups["controllers"]
@@ -175,7 +267,7 @@
       until: kubevirt_ready.stdout == "kubevirt.kubevirt.io/kubevirt condition met"
       retries: 10
       delay: 20
-    
+
     - name: Create namespace for kubevirt images
       kubernetes.core.k8s:
         api_version: v1
@@ -183,83 +275,164 @@
         state: present
         name: kubevirt-images
 
-    - name: Patch to use nested virtualization
-      kubernetes.core.k8s:
-        state: patched
-        kind: KubeVirt
-        name: kubevirt
-        namespace: kubevirt
-        api_version: kubevirt.io/v1
-        definition:
-          spec:
-            configuration:
-              developerConfiguration:
-                useEmulation: true
-          
-# TODO: Customize this for the final cluster storage solution
+  # NOTE: This is necessary if VMs are going on nested hypervisors. If nodes are all baremetal, then remove this.
+  #  - name: Patch to use nested virtualization
+  #    kubernetes.core.k8s:
+  #      state: patched
+  #      kind: KubeVirt
+  #      name: kubevirt
+  #      namespace: kubevirt
+  #      api_version: kubevirt.io/v1
+  #      definition:
+  #        spec:
+  #          configuration:
+  #            developerConfiguration:
+  #              useEmulation: true
+
 - name: Create storage provisioners
   when: inventory_hostname in groups["controllers"]
   block:
-  - name: Install storage drivers
-    shell: |
-      kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.26/deploy/local-path-storage.yaml
-      kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+    - name: Install storage drivers
+      shell: |
+        kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.26/deploy/local-path-storage.yaml
+        kubectl apply -f https://openebs.github.io/charts/openebs-operator.yaml
 
-#############################################
-# Pass around credentials for access to cluster
-#############################################
+- name: Set node labels and prep storage provisioner
+  when: inventory_hostname in groups["controllers"]
+  loop: "{{ groups['workers'] }}"
+  shell: |
+    kubectl label nodes {{ item }} architecture={{ hostvars[item]['node_label'] }}
+    kubectl label node {{ item }} openebs.io/engine=mayastor
 
-- name: Steal admin config from controller for a bit
+- name: Update hugepages
+  when: inventory_hostname in groups["workers"]
+  block:
+    - name: Update hugepages
+      lineinfile:
+        line: vm.nr_hugepages = 1048
+        name: /etc/sysctl.conf
+        state: present
+    - name: Replace nf_hugepages
+      shell: |
+        echo 1048 | tee /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+        modprobe nvme_tcp
+
+    - name: Restart kubelet
+      service:
+        name: kubelet
+        state: restarted
+
+- name: Deploy helm to controller
+  when: inventory_hostname in groups["controllers"]
+  shell: curl -fsSL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+
+- name: Prepare post-setup storage
   when: inventory_hostname in groups["controllers"]
   block:
-  - name: Get config from controller
-    slurp:
-      src: /etc/kubernetes/admin.conf
-    register: kubeconfig
+    - name: Install Mayastor repo
+      shell: helm repo add mayastor https://openebs.github.io/mayastor-extensions/
 
-  - name: Create .kube if not exists
-    become: false
-    delegate_to: localhost
-    file:
-      path: ~/.kube
-      state: directory
+    - name: Update helm
+      ignore_errors: true
+      shell: helm repo update
 
-  - name: Clean kubeconfig
-    become: false
-    delegate_to: localhost
-    file:
-      path: ~/.kube/config.hscluster
-      state: absent
+    - name: Install mayastor
+      ignore_errors: true
+      shell: helm install mayastor mayastor/mayastor -n openebs --create-namespace --version 2.5.0
 
-  - name: Copy kubeconfig to local
-    become: false
-    delegate_to: localhost
-    copy:
-      content: "{{ kubeconfig.content | b64decode | string }}"
-      dest: ~/.kube/config.hscluster
+    - name: Patch mayastore DS
+      shell: |
+        kubectl patch daemonset \
+          mayastor-io-engine \
+          --namespace openebs \
+          --type='json' \
+          -p='[{"op": "replace", "path": "/spec/template/spec/containers/1/args", "value": [
+            "-g$(MY_POD_IP)",
+            "-N$(MY_NODE_NAME)",
+            "-Rhttps://mayastor-agent-core:50051",
+            "-y/var/local/mayastor/io-engine/config.yaml",
+            "-l1,2",
+            "-p=mayastor-etcd:2379",
+            "--ptpl-dir=/var/local/mayastor/io-engine/ptpl/",
+            "--api-versions=v1",
+            "--tgt-crdt=30",
+            "--events-url=nats://mayastor-nats:4222",
+            "--env-context=--iova-mode=pa"
+        ]}]'
 
-  - name: Create remote config path
-    file:
-      path: /root/.kube
-      state: directory
+    - name: Replace mayastor io engine
+      shell: |
+        kubectl delete pods -n openebs -l app=io-engine
 
-  - name: Copy kubeconfig to remote for future scripts
-    copy:
-      content: "{{ kubeconfig.content | b64decode | string }}"
-      dest: /root/.kube/config
+    - name: Create mayastor 1 rv storageclass
+      kubernetes.core.k8s:
+        state: present
+        template: mayastor-1xstorageclass.yml.j2
 
-  - name: Replace IP
-    become: false
-    delegate_to: localhost
-    replace:
-      path: ~/.kube/config.hscluster
-      regexp: "0.0.0.0"
-      replace: "{{ ansible_default_ipv4.address }}"
+    - name: Create mayastor 3 rv storageclass
+      kubernetes.core.k8s:
+        state: present
+        template: mayastor-3xstorageclass.yml.j2
 
-  - name: Replace CA
-    become: false
-    delegate_to: localhost
-    replace:
-      path: ~/.kube/config.hscluster
-      regexp: "certificate-authority-data.*"
-      replace: "insecure-skip-tls-verify: true"
+    - name: Create local-host storageclass
+      kubernetes.core.k8s:
+        state: present
+        template: local-path.yml.j2
+
+    - name: Patch local-host path provisioner to existing path
+      shell: |
+        kubectl patch configmap/local-path-config -n local-path-storage --type merge -p '{"data":{"config.json":"{\"nodePathMap\":[{\"node\":\"DEFAULT_PATH_FOR_NON_LISTED_NODES\",\"paths\":[\"/opt/local-path-provisioner\"]}]}"}}'
+
+    - name: Set node labels and prep storage provisioner
+      loop: "{{ groups['workers'] }}"
+      retries: 10
+      delay: 20
+      register: diskpool
+      until: diskpool.failed == false
+      kubernetes.core.k8s:
+        state: present
+        template: mayastor-diskpool.yaml.j2
+
+- name: Install observability
+  when: inventory_hostname in groups["controllers"]
+  block:
+    - name: Install prometheus repo
+      shell: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+
+    - name: Update helm
+      ignore_errors: true
+      shell: helm repo update
+
+    - name: Install prometheus with persistent volume
+      ignore_errors: true
+      kubernetes.core.helm:
+        name: kps
+        chart_ref: "prometheus-community/kube-prometheus-stack"
+        create_namespace: true
+        release_namespace: monitoring
+        state: present
+        release_values:
+          grafana:
+            enabled: false
+          prometheus:
+            prometheusSpec:
+              storageSpec:
+                volumeClaimTemplate:
+                  spec:
+                    storageClassName: "mayastor-3-rv"
+                    accessModes: ["ReadWriteOnce"]
+                    resources:
+                      requests:
+                        storage: 50Gi
+
+    - name: Install Metrics-API
+      kubernetes.core.helm:
+        name: metrics-server
+        chart_ref: metrics-server
+        chart_repo_url: https://kubernetes-sigs.github.io/metrics-server/
+        create_namespace: true
+        release_namespace: monitoring
+        state: present
+        release_values:
+          args:
+            - --kubelet-insecure-tls

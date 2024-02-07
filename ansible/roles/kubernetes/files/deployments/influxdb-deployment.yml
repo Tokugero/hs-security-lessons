@@ -1,20 +1,20 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: influxdb
   namespace: shared-services
-  labels:
-    app: influxdb
 spec:
-  replicas: 1
   selector:
     matchLabels:
-      app: influxdb
+      app: influxdb 
+  serviceName: "influxdb"
+  replicas: 1
   template:
     metadata:
       labels:
         app: influxdb
     spec:
+      terminationGracePeriodSeconds: 10
       containers:
       - name: influxdb
         image: influxdb:2.7.5
@@ -30,8 +30,20 @@ spec:
         - name: DOCKER_INFLUXDB_INIT_ORG
           value: "lessons"
         - name: DOCKER_INFLUXDB_INIT_RETENTION
-          value: "1w"
+          value: "4w"
         - name: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN
           value: "adminadmin"
         ports:
         - containerPort: 8086
+        volumeMounts:
+        - name: config
+          mountPath: /var/lib/influxdb2
+  volumeClaimTemplates:
+  - metadata:
+      name: config
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: mayastor-3-rv
+      resources:
+        requests:
+          storage: 100Gi

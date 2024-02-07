@@ -23,4 +23,4 @@ ansible all --ask-vault-pass -i inventory -m debug -a "msg='User: {{ ansible_use
             ```
 
 1.  Add port forward 18443:8443 to uploadproxy.
-1.  upload image `virtctl image-upload dv ubuntu-base --namespace kubevirt-images --size=20Gi --image-path ../images/ubuntu.qcow2 --uploadproxy-url=https://127.0.0.1:18443 --insecure --access-mode ReadWriteOnce --volume-mode filesystem --force-bind`
+1.  upload image `virtctl image-upload dv ubuntu-base --namespace kubevirt-images --size=20Gi --image-path ../images/ubuntu.qcow2 --uploadproxy-url=https://127.0.0.1:18443 --insecure --access-mode ReadWriteOnce --volume-mode filesystem`
