@@ -77,3 +77,52 @@
 #  kubernetes.core.k8s:
 #    state: present
 #    src: grafana-dashboards.yml
+- name: Deploy dummy jenkinsauth secret for dashboard
+  kubernetes.core.k8s:
+    state: present
+    api_version: v1
+    kind: Secret
+    name: jenkinsauth
+    namespace: shared-services
+    data:
+      JENKINSAUTH: "foobar"
+
+- name: Deploy dummy gitea ssh secret for dashboard
+  kubernetes.core.k8s:
+    state: present
+    api_version: v1
+    kind: Secret
+    name: giteassh
+    namespace: shared-services
+    data:
+      id_rsa: "foobar"
+
+- name: Deploy dashboard pods
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', 'deployments/gitea-deployment.yml') | from_yaml }}"
+
+- name: Deploy dashboard service
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', 'deployments/gitea-service.yml') | from_yaml }}"
+
+- name: Deploy dashboard ClusterRole
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', 'deployments/dashboard-cr.yml') | from_yaml }}"
+
+- name: Deploy dashboard ClusterRoleBinding
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', 'deployments/dashboard-crb.yml') | from_yaml }}"
+
+- name: Deploy dashboard Service Account
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', 'deployments/dashboard-sa.yml') | from_yaml }}"
+
+- name: Deploy dashboard SA Secret
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', 'deployments/dashboard-secret.yml') | from_yaml }}"

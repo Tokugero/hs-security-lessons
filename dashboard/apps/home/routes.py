@@ -123,7 +123,7 @@ def cleanEnvironment():
     if current_user.role != "teacher":
         return redirect("/index", code=403)
     
-    resp = requests.post(os.getenv("JENKINSURL", "http://192.168.128.103")+"/job/student-reconcile/buildWithParameters", 
+    resp = requests.post("http://"+os.getenv("JENKINSURLINT", "192.168.128.103")+"/job/student-reconcile/buildWithParameters", 
                         data={
                             "token": os.getenv("SDTOKEN", "studentdeploy"),
                             "STUDENTNAME": request.form["namespace"],
@@ -165,9 +165,9 @@ def teacher():
     segment = get_segment(request)
     
     usefulLinks = [
-        {"url": "http://"+os.getenv("GRAFANA", "192.168.128.101"), "icon": "fa fa-desktop", "title": "Grafana"},
-        {"url": os.getenv("JENKINSURL", "http://192.168.128.103"), "icon": "fa fa-desktop", "title": "Jenkins"},
-        {"url": os.getenv("GITEAURL", "http://192.168.128.102"), "icon": "fa fa-desktop", "title": "Gitea"},
+        {"url": "http://"+os.getenv("GRAFANAURLEXT", "192.168.128.101"), "icon": "fa fa-desktop", "title": "Grafana"},
+        {"url": "http://"+os.getenv("JENKINSURLEXT", "192.168.128.103"), "icon": "fa fa-desktop", "title": "Jenkins"},
+        {"url": "http://"+os.getenv("GITEAURLEXT", "192.168.128.102"), "icon": "fa fa-desktop", "title": "Gitea"},
     ]
 
     return render_template("home/teacher.html", segment=segment, sidebar=sidebar(current_user.role), usefulLinks=usefulLinks)
@@ -179,7 +179,7 @@ def createLesson(lesson):
     segment = get_segment(request)
 
     user = current_user.username
-    resp = requests.post(os.getenv("JENKINSURL", "http://192.168.128.103")+"/job/student-deploy/buildWithParameters", 
+    resp = requests.post("http://"+os.getenv("JENKINSURLINT", "192.168.128.103")+"/job/student-deploy/buildWithParameters", 
                          data={
                              "token": os.getenv("SDTOKEN", "studentdeploy"),
                              "STUDENTNAME": user, 
@@ -197,7 +197,7 @@ def cleanLesson():
     segment = get_segment(request)
 
     user = current_user.username
-    resp = requests.post(os.getenv("JENKINSURL", "http://192.168.128.103")+"/job/student-reconcile/buildWithParameters", 
+    resp = requests.post("http://"+os.getenv("JENKINSURLINT", "192.168.128.103")+"/job/student-reconcile/buildWithParameters", 
                          data={
                              "token": os.getenv("SDTOKEN", "studentdeploy"),
                              "STUDENTNAME": user,
@@ -246,7 +246,7 @@ def student():
             if dir == lesson:
                 lessonRet = {
                     "active": True, # Check kubeapi response if label is set to this lesson
-                    "grafana": "http://"+os.getenv("GRAFANA", "192.168.128.101")+"/d/studentboard/lesson-scores-per-student?orgId=1&refresh=15m&from=now-1h&to=now&var-students="+current_user.username+"&var-Lessons="+lesson+"&kiosk=1",
+                    "grafana": "http://"+os.getenv("GRAFANAURLEXT", "192.168.128.101")+"/d/studentboard/lesson-scores-per-student?orgId=1&refresh=10s&from=now-1h&to=now&var-students="+current_user.username+"&var-Lessons="+lesson+"&kiosk=1",
                     "name": dir,
                     "timeleft": (timestamp+timedelta(hours=4))-datetime.now(timezone.utc), # Display age of the lesson 
                     "vnc": vnc, # Get vnc url for this lesson
@@ -255,7 +255,7 @@ def student():
             else:
                 lessonRet = {
                     "active": False, # Check kubeapi response if label is set to this lesson
-                    "grafana": "http://"+os.getenv("GRAFANA", "192.168.128.101")+"/d/studentboard/lesson-scores-per-student?orgId=1&refresh=15m&from=now-1h&to=now&var-students="+current_user.username+"&var-Lessons="+dir+"&kiosk=1",
+                    "grafana": "http://"+os.getenv("GRAFANAURLEXT", "192.168.128.101")+"/d/studentboard/lesson-scores-per-student?orgId=1&refresh=10s&from=now-1h&to=now&var-students="+current_user.username+"&var-Lessons="+dir+"&kiosk=1",
                     "name": dir,
                     "timeleft": None, # Display age of the lesson
                     "vnc": None, # Get vnc url for this lesson

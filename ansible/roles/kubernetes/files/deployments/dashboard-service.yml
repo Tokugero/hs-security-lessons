@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard
+  namespace: shared-services
+spec:
+  ports:
+    - port: 80
+      name: web
+      protocol: TCP
+      targetPort: 5005
+  selector:
+    app: dashboard
+  type: LoadBalancer

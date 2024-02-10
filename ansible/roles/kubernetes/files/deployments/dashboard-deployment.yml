@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dashboard
+  namespace: shared-services
+spec:
+  selector:
+    matchLabels:
+      app: dashboard
+  serviceName: "dashboard"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: dashboard
+    spec:
+      serviceAccountName: dashboard
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: dashboard
+          image: registry.shared-services/dashboard
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5005
+              name: web
+          env:
+            - name: LESSONREPO
+              value: "git@gitea.shared-services:teacher/lessons.git"
+            - name: JENKINSURLINT
+              value: "jenkins.shared-services"
+            - name: GRAFANAURLEXT
+              value: "192.168.128.101"
+            - name: JENKINSURLEXT
+              value: "192.168.128.103"
+            - name: GITEAURLEXT
+              value: "192.168.128.102"
+            - name: JENKINSAUTH
+              valueFrom:
+                secretKeyRef:
+                  name: jenkinsauth
+                  key: JENKINSAUTH
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: giteassh
+              mountPath: /root/.ssh/id_rsa
+              subPath: id_rsa
+      volumes:
+        - name: giteassh
+          secret:
+            secretName: giteassh
+            defaultMode: 384
+  volumeClaimTemplates:
+    - metadata:
+        name: config
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: mayastor-3-rv
+        resources:
+          requests:
+            storage: 10Gi
