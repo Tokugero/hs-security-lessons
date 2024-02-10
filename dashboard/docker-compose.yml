@@ -1,0 +1,17 @@
+version: "3.8"
+services:
+  dashboard-app:
+    container_name: dashboard_app
+    restart: always
+    env_file: .env
+    environment:
+      - KUBERNETES_SERVICE_HOST=192.168.128.200
+      - KUBERNETES_SERVICE_PORT=6443
+    build: .
+    volumes:
+      - ${PWD}/id_rsa:/root/.ssh/id_rsa
+      - ${PWD}/k8ssecrets/token:/var/run/secrets/kubernetes.io/serviceaccount/token
+      - ${PWD}/k8ssecrets/ca.crt:/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      - ${PWD}/config:/config
+    ports:
+      - "5005:5005"

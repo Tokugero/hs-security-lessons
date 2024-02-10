@@ -1,3 +1,4 @@
+# TODO: Rebuild the jenkins container to include these binaries rather than steal them from the host.
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -32,6 +33,8 @@ spec:
               mountPath: /var/jenkins_home
             - name: dockerbin
               mountPath: /usr/bin/docker
+            - name: kubectlbin
+              mountPath: /usr/bin/kubectl
         - name: dind
           securityContext:
             runAsUser: 0
@@ -45,6 +48,10 @@ spec:
         - name: dockerbin
           hostPath:
             path: /usr/bin/docker
+            type: File
+        - name: kubectlbin
+          hostPath:
+            path: /usr/bin/kubectl
             type: File
         - name: daemonjson
           configMap:

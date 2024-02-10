@@ -1,0 +1,4 @@
+id_rsa
+/config
+.env
+/k8ssecrets
