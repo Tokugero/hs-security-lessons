@@ -1,0 +1,87 @@
+apiVersion: kubevirt.io/v1alpha3
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt.io/vm: ubuntu-test-1
+  name: ubuntu-test-1
+  namespace: default
+spec:
+  runStrategy: "RerunOnFailure"
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: ubuntu-test-1
+    spec:
+      domain:
+        devices:
+          disks:
+          - dedicatedIOThread: true
+            disk:
+              bus: virtio
+            name: datavolumedisk1
+            cache: none
+          - dedicatedIOThread: true
+            disk:
+              bus: virtio
+            name: cloudinit
+            tag: cidata
+        machine:
+          type: q35
+        cpu:
+          cores: 1
+        resources:
+          requests:
+            memory: 2Gi
+      terminationGracePeriodSeconds: 0
+      volumes:
+      - dataVolume:
+          name: ubuntu-test-1
+        name: datavolumedisk1
+      - name: cloudinit
+        cloudInitConfigDrive:
+          userData: |
+            #!/bin/bash
+            touch /thisisfromcloudinit
+            echo "This is from cloud-init"
+  dataVolumeTemplates:
+  - metadata:
+      name: ubuntu-test-1
+    spec:
+      pvc:
+        storageClassName: var-local-path
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 28Gi
+      source:
+        pvc:
+          namespace: kubevirt-images
+          name: ubuntu-base
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ubuntu-test-1
+  namespace: default 
+spec:
+  ports:
+  - port: 22 
+    name: ssh
+    protocol: TCP
+    targetPort: 22
+  - port: 80
+    name: websockify
+    protocol: TCP
+    targetPort: 8080
+  - port: 3389
+    name: rdp
+    protocol: TCP
+    targetPort: 3389
+  - port: 5900
+    name: vnc
+    protocol: TCP
+    targetPort: 5900
+  selector:
+    kubevirt.io/vm: ubuntu-test-1
+  type: LoadBalancer

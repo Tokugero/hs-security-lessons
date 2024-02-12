@@ -58,11 +58,37 @@
     regexp: 'config_path = ""'
     line: '      config_path = "/etc/containerd/certs.d"'
 
+- name: Docker pull registry
+  when: inventory_hostname in groups["controllers"]
+  block:
+    - name: Pull registry
+      docker_image:
+        name: registry:2
+        source: pull
+
+    - name: Create directory for registry
+      file:
+        path: /mnt/usbstorage/registry
+        state: directory
+
+    - name: Copy docker-compsoe
+      copy:
+        src: ptc-registry-docker-compose.yml
+        dest: /mnt/usbstorage/registry/docker-compose.yml
+
+    - name: Copy config override
+      copy:
+        src: ptc-registry-config.yml
+        dest: /mnt/usbstorage/registry/config.yml
+
+    - name: Start registry
+      shell: docker compose -f /mnt/usbstorage/registry/docker-compose.yml up -d
+
 - name: Add host for future cluster insecure local registry
   block:
     - name: Clean directory for certs
       file:
-        path: "/etc/containerd/certs.d/{{ registry_ip }}"
+        path: "/etc/containerd/certs.d/"
         state: absent
 
     - name: Create directory for certs
@@ -75,11 +101,6 @@
         src: insecure-registry.toml.j2
         dest: "/etc/containerd/certs.d/{{ registry_ip }}/hosts.toml"
 
-    - name: Clean directory for certs
-      file:
-        path: "/etc/containerd/certs.d/registry.shared-services"
-        state: absent
-
     - name: Create directory for certs
       file:
         path: "/etc/containerd/certs.d/registry.shared-services"
@@ -89,6 +110,76 @@
       template:
         src: insecure-registry.toml.j2
         dest: "/etc/containerd/certs.d/registry.shared-services/hosts.toml"
+
+    - name: Create directory for dockerhub
+      file:
+        path: "/etc/containerd/certs.d/registry-1.docker.io"
+        state: directory
+
+    - name: Registry proxy configuration
+      copy:
+        content: |
+          server = "https://registry-1.docker.io"
+          [host."http://{{ hostvars['controller-001'].ansible_default_ipv4.address }}:5000"]
+            capabilities = ["pull", "resolve"]
+            skip_verify = true
+        dest: /etc/containerd/certs.d/registry-1.docker.io/hosts.toml
+
+    - name: Create directory for k8s
+      file:
+        path: "/etc/containerd/certs.d/registry.k8s.io"
+        state: directory
+
+    - name: Registry proxy configuration
+      copy:
+        content: |
+          server = "https://registry.k8s.io"
+          [host."http://{{ hostvars['controller-001'].ansible_default_ipv4.address }}:5001"]
+            capabilities = ["pull", "resolve"]
+            skip_verify = true
+        dest: /etc/containerd/certs.d/registry.k8s.io/hosts.toml
+
+    - name: Create directory for quay
+      file:
+        path: "/etc/containerd/certs.d/quay.io"
+        state: directory
+
+    - name: Registry proxy configuration
+      copy:
+        content: |
+          server = "https://https://quay.io"
+          [host."http://{{ hostvars['controller-001'].ansible_default_ipv4.address }}:5002"]
+            capabilities = ["pull", "resolve"]
+            skip_verify = true
+        dest: /etc/containerd/certs.d/quay.io/hosts.toml
+
+    - name: Create directory for gcr
+      file:
+        path: "/etc/containerd/certs.d/gcr.io"
+        state: directory
+
+    - name: Registry proxy configuration
+      copy:
+        content: |
+          server = "https://gcr.io"
+          [host."http://{{ hostvars['controller-001'].ansible_default_ipv4.address }}:5003"]
+            capabilities = ["pull", "resolve"]
+            skip_verify = true
+        dest: /etc/containerd/certs.d/gcr.io/hosts.toml
+
+    - name: Create directory for ghcr
+      file:
+        path: "/etc/containerd/certs.d/ghcr.io"
+        state: directory
+
+    - name: Registry proxy configuration
+      copy:
+        content: |
+          server = "https://https://ghcr.io"
+          [host."http://{{ hostvars['controller-001'].ansible_default_ipv4.address }}:5004"]
+            capabilities = ["pull", "resolve"]
+            skip_verify = true
+        dest: /etc/containerd/certs.d/ghcr.io/hosts.toml
 
     - name: Restart containerd
       service:

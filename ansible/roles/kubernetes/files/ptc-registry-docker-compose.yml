@@ -1,0 +1,51 @@
+services:
+  dockerio-registry:
+    image: registry:2
+    restart: always
+    ports:
+      - 5000:5000
+    volumes:
+      - /mnt/usbstorage/registry/dockerhub:/var/lib/registry
+      - /mnt/usbstorage/registry/config.yml:/etc/docker/registry/config.yml:ro
+    environment:
+      REGISTRY_PROXY_REMOTEURL: https://registry-1.docker.io
+  k8sio-registry:
+    image: registry:2
+    restart: always
+    ports:
+      - 5001:5000
+    volumes:
+      - /mnt/usbstorage/registry/k8sio:/var/lib/registry
+      - /mnt/usbstorage/registry/config.yml:/etc/docker/registry/config.yml:ro
+    environment:
+      REGISTRY_PROXY_REMOTEURL: https://registry.k8s.io
+  quay-registry:
+    image: registry:2
+    restart: always
+    ports:
+      - 5002:5000
+    volumes:
+      - /mnt/usbstorage/registry/quayio:/var/lib/registry
+      - /mnt/usbstorage/registry/config.yml:/etc/docker/registry/config.yml:ro
+    environment:
+      REGISTRY_PROXY_REMOTEURL: https://quay.io
+  gcr-registry:
+    restart: always
+    image: registry:2
+    ports:
+      - 5003:5000
+    volumes:
+      - /mnt/usbstorage/registry/gcr:/var/lib/registry
+      - /mnt/usbstorage/registry/config.yml:/etc/docker/registry/config.yml:ro
+    environment:
+      REGISTRY_PROXY_REMOTEURL: https://gcr.io
+  ghcr-registry:
+    restart: always
+    image: registry:2
+    ports:
+      - 5004:5000
+    volumes:
+      - /mnt/usbstorage/registry/ghcr:/var/lib/registry
+      - /mnt/usbstorage/registry/config.yml:/etc/docker/registry/config.yml:ro
+    environment:
+      REGISTRY_PROXY_REMOTEURL: https://ghcr.io

@@ -77,25 +77,26 @@
 #  kubernetes.core.k8s:
 #    state: present
 #    src: grafana-dashboards.yml
-- name: Deploy dummy jenkinsauth secret for dashboard
-  kubernetes.core.k8s:
-    state: present
-    api_version: v1
-    kind: Secret
-    name: jenkinsauth
-    namespace: shared-services
-    data:
-      JENKINSAUTH: "foobar"
+#- name: Deploy dummy jenkinsauth secret for dashboard
+#  kubernetes.core.k8s:
+#    state: present
+#    api_version: v1
+#    kind: Secret
+#    name: jenkinsauth
+#    namespace: shared-services
+#    # TODO: Fix this
+#    data:
+#      JENKINSAUTH: "foobar"
 
-- name: Deploy dummy gitea ssh secret for dashboard
-  kubernetes.core.k8s:
-    state: present
-    api_version: v1
-    kind: Secret
-    name: giteassh
-    namespace: shared-services
-    data:
-      id_rsa: "foobar"
+#- name: Deploy dummy gitea ssh secret for dashboard
+#  kubernetes.core.k8s:
+#    state: present
+#    api_version: v1
+#    kind: Secret
+#    name: giteassh
+#    namespace: shared-services
+#    data:
+#      id_rsa: "foobar"
 
 - name: Deploy dashboard pods
   kubernetes.core.k8s:

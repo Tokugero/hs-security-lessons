@@ -22,22 +22,31 @@ spec:
         app: sample-lesson
     spec:
       containers:
-      - name: sample-lesson
-        image: 192.168.20.30/sample_lesson
-        ports:
-        - containerPort: 3389
-        imagePullPolicy: Always
-        volumeMounts:
-        - name: telegraf-config
-          mountPath: /etc/telegraf/telegraf.conf
-          subPath: telegraf.conf
+        - name: sample-lesson
+          image: registry.shared-services/sample-lesson2/sample-lesson2
+          ports:
+            - containerPort: 3389
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: scores-config
+              mountPath: /etc/telegraf/telegraf.d/scores.conf
+              subPath: scores.conf
+            - name: global-config
+              mountPath: /etc/telegraf/telegraf.d/global.conf
+              subPath: global.conf
       volumes:
-      - name: telegraf-config
-        configMap:
-          name: telegraf-config
-          items:
-          - key: telegraf.conf
-            path: telegraf.conf
+        - name: scores-config
+          configMap:
+            name: scores-config
+            items:
+              - key: scores.conf
+                path: scores.conf
+        - name: global-config
+          configMap:
+            name: global-config
+            items:
+              - key: global.conf
+                path: global.conf
 ---
 apiVersion: v1
 kind: Service
@@ -46,9 +55,9 @@ metadata:
   namespace: philip-almueti
 spec:
   ports:
-  - name: rdp
-    port: 3389
-    targetPort: 3389
+    - name: rdp
+      port: 3389
+      targetPort: 3389
   selector:
     app: sample-lesson
   type: LoadBalancer
@@ -56,71 +65,43 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: telegraf-config
+  name: scores-config
   namespace: philip-almueti
 data:
-  telegraf.conf: |
-    [global_tags]
-      student = "philip-almueti"
-      lesson = "sample-lesson"
-    [agent]
-      interval = "10s"
-      round_interval = true
-      metric_batch_size = 1000
-      metric_buffer_limit = 10000
-      collection_jitter = "0s"
-      flush_interval = "10s"
-      flush_jitter = "0s"
-      precision = "0s"
-      hostname = ""
-      omit_hostname = false
-    [[outputs.influxdb_v2]]
-      urls = ["http://influxdb.shared-services:8086"]
-      token = "adminadmin"
-      organization = "lessons"
-      bucket = "lessons"
-      
+  scores.conf: |
     [[inputs.exec]]
-      name_override = "paarthurnax_identified"
       commands = ['/bin/bash -c "if cat /config/.bash_history | grep \"id paarthurnax\";then echo \"12\"; else echo \"0\";fi"']
       data_format = "value"
       data_type = "integer"
+      name_override = "paarthurnax_identified"
+      tags = {type = "score"}
     [[inputs.exec]]
-      name_override = "ballen_removed"
       commands = ['/bin/bash -c "if cat /etc/passwd | grep -q ballen;then echo \"0\"; else echo \"5\";fi"']
       data_format = "value"
       data_type = "integer"
+      name_override = "ballen_removed"
+      tags = {type = "score"}
     [[inputs.exec]]
-      name_override = "sheogorath_removed"
       commands = ['/bin/bash -c "if cat /etc/passwd | grep -q sheogorath;then echo \"0\"; else echo \"5\";fi"']
       data_format = "value"
       data_type = "integer"
+      name_override = "sheogorath_removed"
+      tags = {type = "score"}
     [[inputs.exec]]
-      name_override = "ulfric_not_admin"
       commands = ['/bin/bash -c "if id ulfric | grep -q root;then echo \"0\"; else echo \"5\";fi"']
       data_format = "value"
       data_type = "integer"
+      name_override = "ulfric_not_admin"
+      tags = {type = "score"}
     [[inputs.exec]]
-      name_override = "esbern_insecure"
       commands = ['/bin/bash -c "if cat /etc/shadow | grep -q papAq5PwY/QQM;then echo \"0\"; else echo \"5\";fi"']
       data_format = "value"
       data_type = "integer"
+      name_override = "esbern_insecure"
+      tags = {type = "score"}
     [[inputs.exec]]
-      name_override = "belethor_not_found"
       commands = ['/bin/bash -c "if cat /etc/passwd | grep -q belethor;then echo \"0\"; else echo \"5\";fi"']
       data_format = "value"
       data_type = "integer"
-    [[inputs.cpu]]
-      percpu = true
-      totalcpu = true
-      collect_cpu_time = false
-      report_active = false
-      core_tags = false
-    [[inputs.disk]]
-      ignore_fs = ["tmpfs", "devtmpfs", "devfs", "iso9660", "overlay", "aufs", "squashfs"]
-    [[inputs.diskio]]
-    [[inputs.kernel]]
-    [[inputs.mem]]
-    [[inputs.processes]]
-    [[inputs.swap]]
-    [[inputs.system]]
+      name_override = "belethor_not_found"
+      tags = {type = "score"}
