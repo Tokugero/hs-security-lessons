@@ -147,7 +147,7 @@
     - name: Registry proxy configuration
       copy:
         content: |
-          server = "https://https://quay.io"
+          server = "https://quay.io"
           [host."http://{{ hostvars['controller-001'].ansible_default_ipv4.address }}:5002"]
             capabilities = ["pull", "resolve"]
             skip_verify = true
@@ -175,11 +175,25 @@
     - name: Registry proxy configuration
       copy:
         content: |
-          server = "https://https://ghcr.io"
+          server = "https://ghcr.io"
           [host."http://{{ hostvars['controller-001'].ansible_default_ipv4.address }}:5004"]
             capabilities = ["pull", "resolve"]
             skip_verify = true
         dest: /etc/containerd/certs.d/ghcr.io/hosts.toml
+
+    - name: Create directory for lscr
+      file:
+        path: "/etc/containerd/certs.d/lscr.io"
+        state: directory
+
+    - name: Registry proxy configuration
+      copy:
+        content: |
+          server = "https://lscr.io"
+          [host."http://{{ hostvars['controller-001'].ansible_default_ipv4.address }}:5005"]
+            capabilities = ["pull", "resolve"]
+            skip_verify = true
+        dest: /etc/containerd/certs.d/lscr.io/hosts.toml
 
     - name: Restart containerd
       service:

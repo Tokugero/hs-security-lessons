@@ -49,3 +49,13 @@ services:
       - /mnt/usbstorage/registry/config.yml:/etc/docker/registry/config.yml:ro
     environment:
       REGISTRY_PROXY_REMOTEURL: https://ghcr.io
+  lscr-registry:
+    restart: always
+    image: registry:2
+    ports:
+      - 5005:5000
+    volumes:
+      - /mnt/usbstorage/registry/lscr:/var/lib/registry
+      - /mnt/usbstorage/registry/config.yml:/etc/docker/registry/config.yml:ro
+    environment:
+      REGISTRY_PROXY_REMOTEURL: https://lscr.io
