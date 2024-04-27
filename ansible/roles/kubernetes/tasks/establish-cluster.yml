@@ -417,12 +417,13 @@
   block:
     - name: Update hugepages
       lineinfile:
-        line: vm.nr_hugepages = 1048
+        line: vm.nr_hugepages = 1024
         name: /etc/sysctl.conf
         state: present
+
     - name: Replace nf_hugepages
       shell: |
-        echo 1048 | tee /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+        echo 1024 | tee /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
         modprobe nvme_tcp
 
     - name: Restart kubelet
@@ -477,11 +478,13 @@
           -p='[{"op": "replace", "path": "/spec/template/spec/containers/1/resources", "value": {
             "limits": {
               "cpu": "0.5",
-              "memory": "1Gi"
+              "memory": "1Gi",
+              "hugepages-2Mi":"2Gi"
             },
             "requests": {
               "cpu": "0.5",
-              "memory": "512Mi"
+              "memory": "512Mi",
+              "hugepages-2Mi":"2Gi"
             }
           }}]'
 

@@ -8,13 +8,39 @@ linux:
     ansible_become_pass: "{{ credentials.linux.root_password | d('') }}"
   hosts:
     controller-001:
-      ansible_host: 192.168.20.178
+      ansible_host: 192.168.128.200
+      node_label: "pi"
+      arch: arm64
     node-linux-001:
-      ansible_host: 192.168.20.176
-windows:
-  vars:
-    ansible_user: "{{ credentials.windows.user | d('Administrator') }}"
-    ansible_password: "{{ credentials.windows.password | d('') }}"
+      ansible_host: 192.168.128.210
+      node_label: "baremetal"
+      arch: amd64
+    node-linux-002:
+      ansible_host: 192.168.128.211
+      node_label: "baremetal"
+      arch: amd64
+    node-linux-003:
+      ansible_host: 192.168.128.212
+      node_label: "baremetal"
+      arch: amd64
+
+controllers:
   hosts:
-    node-windows-001:
-      ansible_host: 192.168.20.175
+    controller-001:
+workers:
+  hosts:
+    node-linux-001:
+    node-linux-002:
+    node-linux-003:
+basevm_linux:
+  vars:
+    ansible_user: ubuntu
+    ansible_password: ubuntu
+    ansible_become_pass: ubuntu # These ephemeral images are meant to be destroyed quickly and need to be accessible by students
+    ansible_become: yes
+  hosts:
+    ubuntu-base-vm:
+      ansible_host: 192.168.20.179
+basevm_windows:
+  hosts:
+    windows-base-vm: 
