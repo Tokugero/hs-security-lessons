@@ -44,6 +44,9 @@
 - name: Disable swap
   command: /usr/sbin/swapoff -a
 
+- name: Disable systemd swap
+  command: systemctl mask "dev-*.swap"
+
 - name: Update fstab
   lineinfile:
     dest: /etc/fstab
@@ -464,6 +467,23 @@
             "--events-url=nats://mayastor-nats:4222",
             "--env-context=--iova-mode=pa"
         ]}]'
+
+    - name: Reduce mayastor resources
+      shell: |
+        kubectl patch daemonset \
+          mayastor-io-engine \
+          --namespace openebs \
+          --type='json' \
+          -p='[{"op": "replace", "path": "/spec/template/spec/containers/1/resources", "value": {
+            "limits": {
+              "cpu": "0.5",
+              "memory": "1Gi"
+            },
+            "requests": {
+              "cpu": "0.5",
+              "memory": "512Mi"
+            }
+          }}]'
 
     - name: Replace mayastor io engine
       shell: |
